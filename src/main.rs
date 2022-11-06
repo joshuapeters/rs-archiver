@@ -23,7 +23,7 @@ struct ArchiveArgs {
 
 impl ArchiveArgs {
     fn parse_args(mut args: Args) -> ArchiveArgs {
-        let dlc_path: String = args.nth(1).expect("please provide an absolute path to your Rocksmith DLC directory.").to_string().trim().to_owned();
+        let dlc_path: String = args.nth(1).get_or_insert(String::new()).to_string().trim().to_owned();
 
         let archive_strategy: ArchiveStrategy = ArchiveStrategy::from_string(std::env::args().nth(2).expect("no archival strategy defined, defaulting to local"));
 
@@ -41,4 +41,10 @@ fn main() {
         eprintln!("absolute path to DLC directory is required");
         return;
     }
+
+    // create zip of dlc directory with run time as name
+
+    // get archiver for provided strategy
+
+    // archive
 }
