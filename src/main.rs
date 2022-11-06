@@ -1,38 +1,10 @@
-use std::env::Args;
+pub mod types;
 
-enum ArchiveStrategy {
-    GoogleDocs,
-    Local
-}
+use std::{path::Path, fs::File, io::{Read, Write}};
+use zip::{result::ZipError, write::FileOptions};
+use walkdir::{DirEntry, WalkDir};
 
-impl ArchiveStrategy {
-    fn from_string(mut strategy_as_string: String) -> ArchiveStrategy {
-        strategy_as_string.make_ascii_lowercase();
-
-        return match strategy_as_string.trim() {
-            "google-docs" => ArchiveStrategy::GoogleDocs,
-            _ => ArchiveStrategy::Local
-        }
-    }
-}
-
-struct ArchiveArgs {
-    dlc_path: String,
-    archive_strategy: ArchiveStrategy
-}
-
-impl ArchiveArgs {
-    fn parse_args(mut args: Args) -> ArchiveArgs {
-        let dlc_path: String = args.nth(1).get_or_insert(String::new()).to_string().trim().to_owned();
-
-        let archive_strategy: ArchiveStrategy = ArchiveStrategy::from_string(std::env::args().nth(2).expect("no archival strategy defined, defaulting to local"));
-
-        return ArchiveArgs {
-            dlc_path,
-            archive_strategy
-        }
-    }
-}
+use crate::types::archive_args::ArchiveArgs;
 
 fn main() {
     let args = ArchiveArgs::parse_args(std::env::args());
@@ -43,8 +15,58 @@ fn main() {
     }
 
     // create zip of dlc directory with run time as name
+    let _zip_result = zip(&args);
 
     // get archiver for provided strategy
 
     // archive
+}
+
+// 
+fn zip(archive_args: &ArchiveArgs) -> zip::result::ZipResult<Option<&str>> {
+    if !Path::new(&archive_args.dlc_path).is_dir() {
+        return Err(ZipError::FileNotFound);
+    }
+
+    let path = Path::new("archive.zip");
+    let file = File::create(&path).unwrap();
+
+    let directory_iterator = WalkDir::new(&archive_args.dlc_path).into_iter();
+
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2).large_file(true);
+
+    let mut buffer = Vec::new();
+
+    for entry in directory_iterator {
+        let path = entry.unwrap().path().to_owned();
+        let name = path.strip_prefix(Path::new(&archive_args.dlc_path)).unwrap();
+
+        // Write file
+        // Some unzip tools unzip files with directory paths correctly, some do not!
+        if path.is_file() {
+            println!("name is {:?}", name);
+            println!("extension is {:?}", name.extension().unwrap());
+
+            // psarc is the file extension of rocksmith dlc track files
+            if name.extension().unwrap() != "psarc" {
+                continue;
+            }
+
+            println!("adding file {:?} as {:?} ...", path, name);
+
+            #[allow(deprecated)]
+            zip.start_file_from_path(name, options)?;
+            let mut f = File::open(path)?;
+
+            f.read_to_end(&mut buffer)?;
+            zip.write_all(&*buffer)?;
+
+            buffer.clear();
+        }
+    }
+
+    zip.finish()?;
+
+    return Result::Ok(path.to_str());
 }
