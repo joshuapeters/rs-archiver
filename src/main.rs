@@ -1,4 +1,5 @@
-#[derive(Debug)]
+use std::env::Args;
+
 enum ArchiveStrategy {
     GoogleDocs,
     Local
@@ -15,27 +16,29 @@ impl ArchiveStrategy {
     }
 }
 
-#[derive(Debug)]
 struct ArchiveArgs {
     dlc_path: String,
     archive_strategy: ArchiveStrategy
 }
 
-fn main() {
-    let dlc_path: String = std::env::args().nth(1).expect("please provide a path to your Rocksmith DLC directory.");
+impl ArchiveArgs {
+    fn parse_args(mut args: Args) -> ArchiveArgs {
+        let dlc_path: String = args.nth(1).expect("please provide an absolute path to your Rocksmith DLC directory.").to_string().trim().to_owned();
 
-    if dlc_path.trim().is_empty() {
-        eprintln!("path to DLC is required");
+        let archive_strategy: ArchiveStrategy = ArchiveStrategy::from_string(std::env::args().nth(2).expect("no archival strategy defined, defaulting to local"));
+
+        return ArchiveArgs {
+            dlc_path,
+            archive_strategy
+        }
+    }
+}
+
+fn main() {
+    let args = ArchiveArgs::parse_args(std::env::args());
+
+    if args.dlc_path.is_empty() {
+        eprintln!("absolute path to DLC directory is required");
         return;
     }
-
-    let archive_strategy: ArchiveStrategy = ArchiveStrategy::from_string(std::env::args().nth(2).expect("no archival strategy defined, defaulting to local"));
-
-    let args = ArchiveArgs {
-        dlc_path,
-        archive_strategy
-    };
-
-
-    println!("{:?}", args);
 }
