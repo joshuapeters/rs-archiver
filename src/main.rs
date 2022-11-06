@@ -34,7 +34,7 @@ fn zip(archive_args: &ArchiveArgs) -> zip::result::ZipResult<Option<&str>> {
     let directory_iterator = WalkDir::new(&archive_args.dlc_path).into_iter();
 
     let mut zip = zip::ZipWriter::new(file);
-    let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2).large_file(true);
+    let options = FileOptions::default().compression_method(zip::CompressionMethod::Deflated).large_file(true);
 
     let mut buffer = Vec::new();
 
